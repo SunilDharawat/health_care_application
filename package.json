@@ -1,6 +1,6 @@
 {
   "name": "aurora-health",
-  "main": "expo-router/entry",
+  "main": "node_modules/expo/AppEntry.js",
   "version": "1.0.0",
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -19,7 +19,6 @@
     "expo-linear-gradient": "~56.0.4",
     "expo-linking": "~56.0.13",
     "expo-notifications": "~56.0.16",
-    "expo-router": "~56.2.9",
     "expo-secure-store": "~56.0.4",
     "expo-splash-screen": "~56.0.10",
     "expo-status-bar": "~56.0.4",
