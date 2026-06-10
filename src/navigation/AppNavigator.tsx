@@ -1,4 +1,5 @@
 import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, StyleSheet } from 'react-native';
@@ -73,28 +74,30 @@ export function AppNavigator() {
   }
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {!isAuthenticated ? (
-        // Auth flow
-        <>
-          <Stack.Screen name="Login"  component={LoginScreen} />
-          <Stack.Screen name="Signup" component={SignupScreen} />
-        </>
-      ) : !profile?.onboarding_done ? (
-        // Onboarding flow
-        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-      ) : (
-        // Main app
-        <>
-          <Stack.Screen name="Main"  component={MainTabs} />
-          <Stack.Screen
-            name="Voice"
-            component={VoiceScreen}
-            options={{ presentation: 'modal' }}
-          />
-        </>
-      )}
-    </Stack.Navigator>
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {!isAuthenticated ? (
+          // Auth flow
+          <>
+            <Stack.Screen name="Login"  component={LoginScreen} />
+            <Stack.Screen name="Signup" component={SignupScreen} />
+          </>
+        ) : !profile?.onboarding_done ? (
+          // Onboarding flow
+          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+        ) : (
+          // Main app
+          <>
+            <Stack.Screen name="Main"  component={MainTabs} />
+            <Stack.Screen
+              name="Voice"
+              component={VoiceScreen}
+              options={{ presentation: 'modal' }}
+            />
+          </>
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
 
