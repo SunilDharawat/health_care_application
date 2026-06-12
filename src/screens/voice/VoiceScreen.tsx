@@ -3,10 +3,17 @@ import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, ActivityIndicator, Animated, Easing, Alert,
 } from 'react-native';
-import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import {
+  useAudioRecorder,
+  RecordingPresets,
+  setAudioModeAsync,
+  createAudioPlayer,
+  getRecordingPermissionsAsync,
+  requestRecordingPermissionsAsync,
+} from 'expo-audio';
 import { useAuthStore } from '../../store';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 
@@ -35,9 +42,9 @@ export default function VoiceScreen({ navigation }: { navigation: { goBack: () =
     },
   ]);
 
-  const recordingRef = useRef<Audio.Recording | null>(null);
-  const soundRef    = useRef<Audio.Sound | null>(null);
-  const scrollRef   = useRef<ScrollView>(null);
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const currentPlayerRef = useRef<any>(null);
+  const scrollRef = useRef<ScrollView>(null);
 
   // Pulse animation for recording state
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -61,18 +68,22 @@ export default function VoiceScreen({ navigation }: { navigation: { goBack: () =
   useEffect(() => {
     // Request audio permissions on mount
     (async () => {
-      const { status } = await Audio.requestPermissionsAsync();
+      const { status } = await getRecordingPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Microphone permission required', 'Please allow microphone access in settings.');
+        const { status: newStatus } = await requestRecordingPermissionsAsync();
+        if (newStatus !== 'granted') {
+          Alert.alert('Microphone permission required', 'Please allow microphone access in settings.');
+        }
       }
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: true,
       });
     })();
     return () => {
-      recordingRef.current?.stopAndUnloadAsync();
-      soundRef.current?.unloadAsync();
+      if (currentPlayerRef.current) {
+        currentPlayerRef.current.release();
+      }
     };
   }, []);
 
@@ -91,10 +102,13 @@ export default function VoiceScreen({ navigation }: { navigation: { goBack: () =
       setVoiceState('recording');
       startPulse();
 
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-      recordingRef.current = recording;
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: true,
+      });
+
+      await recorder.prepareToRecordAsync();
+      recorder.record();
     } catch (err) {
       console.error('Recording start error:', err);
       setVoiceState('idle');
@@ -104,14 +118,13 @@ export default function VoiceScreen({ navigation }: { navigation: { goBack: () =
 
   // ── Stop recording → send to backend
   const stopRecording = async () => {
-    if (voiceState !== 'recording' || !recordingRef.current) return;
+    if (voiceState !== 'recording') return;
     stopPulse();
     setVoiceState('processing');
 
     try {
-      await recordingRef.current.stopAndUnloadAsync();
-      const uri = recordingRef.current.getURI();
-      recordingRef.current = null;
+      await recorder.stop();
+      const uri = recorder.uri;
 
       if (!uri) throw new Error('No recording URI');
 
@@ -165,21 +178,28 @@ export default function VoiceScreen({ navigation }: { navigation: { goBack: () =
         encoding: FileSystem.EncodingType.Base64,
       });
 
-      const { sound } = await Audio.Sound.createAsync({ uri: tempUri });
-      soundRef.current = sound;
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: false,
+      });
 
-      await sound.playAsync();
+      const player = createAudioPlayer(tempUri);
+      currentPlayerRef.current = player;
+
+      player.play();
 
       // Wait for playback to finish
       await new Promise<void>((resolve) => {
-        sound.setOnPlaybackStatusUpdate((status) => {
-          if ('didJustFinish' in status && status.didJustFinish) {
+        const subscription = player.addListener('playbackStatusUpdate', (status) => {
+          if (status.didJustFinish) {
             resolve();
+            subscription.remove();
           }
         });
       });
 
-      await sound.unloadAsync();
+      player.release();
+      currentPlayerRef.current = null;
       await FileSystem.deleteAsync(tempUri, { idempotent: true });
     } catch (err) {
       console.error('Audio playback error:', err);

@@ -11,7 +11,7 @@
     "axios": "^1.17.0",
     "date-fns": "^4.4.0",
     "expo": "~56.0.9",
-    "expo-av": "^16.0.8",
+    "expo-audio": "~56.0.12",
     "expo-constants": "~56.0.17",
     "expo-file-system": "~56.0.7",
     "expo-font": "~56.0.5",
