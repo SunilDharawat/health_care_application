@@ -170,7 +170,10 @@ export default function VoiceScreen({
       startPulse();
 
       console.log("[Voice] Preparing recording...");
-      await audioRecorder.prepareToRecordAsync();
+      await audioRecorder.prepareToRecordAsync({
+        ...RecordingPresets.HIGH_QUALITY,
+        directory: "document",
+      });
 
       console.log("[Voice] Starting recording...");
       audioRecorder.record();
@@ -214,26 +217,12 @@ export default function VoiceScreen({
         throw new Error("Recording file does not exist");
       }
 
-      // Copy file to flat cache directory to avoid subdirectory reading constraints on Android
-      const tempReadUri = `${FileSystem.cacheDirectory}recording_${Date.now()}.m4a`;
-      console.log("[Voice] Copying to temp read path:", tempReadUri);
-      await FileSystem.copyAsync({
-        from: uri,
-        to: tempReadUri,
-      });
-
       // Read as base64
       console.log("[Voice] Reading file as base64...");
-      const base64Audio = await FileSystem.readAsStringAsync(tempReadUri, {
+      const base64Audio = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
       console.log("[Voice] Base64 audio ready, length:", base64Audio.length);
-
-      // Clean up copy
-      try {
-        await FileSystem.deleteAsync(tempReadUri, { idempotent: true });
-        console.log("[Voice] Temp read file cleaned up");
-      } catch {}
 
       // Send to backend
       console.log("[Voice] Sending to backend...");

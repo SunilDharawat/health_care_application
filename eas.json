@@ -1,0 +1,33 @@
+{
+  "cli": {
+    "version": ">= 16.3.1",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_ROUTER_DISABLE_RN_NAVIGATION_CHECK": "1",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ohkpmixsbnjrtnpnitkm.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9oa3BtaXhzYm5qcnRucG5pdGttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwNTk0NDAsImV4cCI6MjA5NjYzNTQ0MH0.E39Y8d8IV7lP5o7hKrMmY9jRIS3BPVdoet5KwZBi-ls",
+        "EXPO_PUBLIC_BACKEND_URL": "https://health-care-server-ci1l.onrender.com"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_ROUTER_DISABLE_RN_NAVIGATION_CHECK": "1",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ohkpmixsbnjrtnpnitkm.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9oa3BtaXhzYm5qcnRucG5pdGttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwNTk0NDAsImV4cCI6MjA5NjYzNTQ0MH0.E39Y8d8IV7lP5o7hKrMmY9jRIS3BPVdoet5KwZBi-ls",
+        "EXPO_PUBLIC_BACKEND_URL": "https://health-care-server-ci1l.onrender.com"
+      }
+    },
+    "production": {
+      "autoIncrement": true
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
