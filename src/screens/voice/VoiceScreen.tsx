@@ -40,10 +40,11 @@ type VoiceState = "idle" | "recording" | "processing" | "speaking";
 export default function VoiceScreen({
   navigation,
 }: {
-  navigation: { goBack: () => void };
+  navigation: { canGoBack: () => boolean; goBack: () => void; navigate: (screen: string) => void };
 }) {
   const { user } = useAuthStore();
   const [voiceState, setVoiceState] = useState<VoiceState>("idle");
+  const [audioReady, setAudioReady] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "0",
@@ -121,6 +122,7 @@ export default function VoiceScreen({
         });
 
         audioSessionRef.current = true;
+        setAudioReady(true);
         console.log("[Audio] Audio session ready");
       } catch (err) {
         console.error("[Audio] Setup error:", err);
@@ -151,6 +153,15 @@ export default function VoiceScreen({
     },
     [],
   );
+
+  const closeVoiceScreen = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+
+    navigation.navigate("Main");
+  };
 
   const startRecording = async () => {
     if (voiceState !== "idle" || !audioSessionRef.current) {
@@ -383,7 +394,7 @@ export default function VoiceScreen({
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={closeVoiceScreen}
           style={styles.backBtn}
         >
           <Text style={styles.backText}>✕</Text>
@@ -473,9 +484,7 @@ export default function VoiceScreen({
             onPressIn={startRecording}
             onPressOut={stopRecording}
             disabled={
-              voiceState === "processing" ||
-              voiceState === "speaking" ||
-              !audioSessionRef.current
+              voiceState === "processing" || voiceState === "speaking" || !audioReady
             }
             activeOpacity={0.9}
           >
