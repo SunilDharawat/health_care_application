@@ -26,6 +26,12 @@
     },
     "plugins": [
       [
+        "expo-audio",
+        {
+          "microphonePermission": "Aurora needs microphone access to hear your voice commands."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
