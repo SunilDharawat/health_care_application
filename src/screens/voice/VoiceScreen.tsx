@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, ActivityIndicator, Animated, Easing, Alert,
 } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -49,6 +49,10 @@ export default function VoiceScreen({ navigation }: { navigation: { goBack: () =
   // Pulse animation for recording state
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const pulseLoop = useRef<Animated.CompositeAnimation | null>(null);
+
+  // Recording lifecycle control refs
+  const stopRequestedRef = useRef(false);
+  const isRecordingStartedRef = useRef(false);
 
   const startPulse = () => {
     pulseLoop.current = Animated.loop(
@@ -97,6 +101,10 @@ export default function VoiceScreen({ navigation }: { navigation: { goBack: () =
   // ── Start recording
   const startRecording = async () => {
     if (voiceState !== 'idle') return;
+    
+    stopRequestedRef.current = false;
+    isRecordingStartedRef.current = false;
+
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setVoiceState('recording');
@@ -107,8 +115,31 @@ export default function VoiceScreen({ navigation }: { navigation: { goBack: () =
         allowsRecording: true,
       });
 
-      await recorder.prepareToRecordAsync();
-      recorder.record();
+      // Only prepare if the recorder is not already prepared
+      const status = recorder.getStatus();
+      if (!status.canRecord) {
+        try {
+          await recorder.prepareToRecordAsync();
+        } catch (prepErr: any) {
+          const msg = prepErr?.message || '';
+          if (!msg.includes('already been prepared') && !msg.includes('already prepared')) {
+            throw prepErr;
+          }
+        }
+      }
+
+      // Add a small 200ms delay on Android to avoid native MediaRecorder race conditions
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      if (stopRequestedRef.current) {
+        // User released the button before preparation finished
+        setVoiceState('idle');
+        stopPulse();
+        return;
+      }
+
+      await recorder.record();
+      isRecordingStartedRef.current = true;
     } catch (err) {
       console.error('Recording start error:', err);
       setVoiceState('idle');
@@ -119,14 +150,35 @@ export default function VoiceScreen({ navigation }: { navigation: { goBack: () =
   // ── Stop recording → send to backend
   const stopRecording = async () => {
     if (voiceState !== 'recording') return;
+    
+    stopRequestedRef.current = true;
+    
+    // If the recording hasn't actually started yet (still preparing),
+    // let startRecording handle the cleanup and return early.
+    if (!isRecordingStartedRef.current) {
+      return;
+    }
+
     stopPulse();
     setVoiceState('processing');
 
     try {
       await recorder.stop();
+      // Add a small 200ms delay to allow the native system to finish writing and release the file lock on Android
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
       const uri = recorder.uri;
 
       if (!uri) throw new Error('No recording URI');
+
+      // Double-check file existence and size before reading
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      if (!fileInfo.exists) {
+        throw new Error('Recording file does not exist on disk');
+      }
+      if (fileInfo.size === 0) {
+        throw new Error('Recording is empty');
+      }
 
       // Read audio as base64
       const base64Audio = await FileSystem.readAsStringAsync(uri, {
@@ -237,7 +289,9 @@ export default function VoiceScreen({ navigation }: { navigation: { goBack: () =
         body: JSON.stringify({ message: text, userId: user.id }),
       });
 
-      if (!response.ok) throw new Error('Backend error');
+      if (!response.ok) {
+        throw new Error(`Server returned status ${response.status}`);
+      }
       const data = await response.json();
       addMessage('aurora', data.reply, data.action);
 
@@ -245,7 +299,8 @@ export default function VoiceScreen({ navigation }: { navigation: { goBack: () =
         setVoiceState('speaking');
         await playAudio(data.audioBase64);
       }
-    } catch {
+    } catch (err) {
+      console.error("Chat connection error:", err);
       addMessage('aurora', "Sorry, I couldn't connect. Make sure the backend is running.");
     } finally {
       setVoiceState('idle');
