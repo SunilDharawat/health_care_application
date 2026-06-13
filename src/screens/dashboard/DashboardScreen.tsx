@@ -154,20 +154,7 @@ export default function DashboardScreen({ navigation }: Props) {
             onPress={handleSignOut}
             activeOpacity={0.75}
           >
-            <Text style={styles.signOutText}>Sign out</Text>
-          </TouchableOpacity>
-          {/* Voice assistant button */}
-          <TouchableOpacity
-            style={styles.voiceBtn}
-            onPress={() => navigation.navigate("Voice")}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={Colors.brand.gradient as [string, string]}
-              style={styles.voiceBtnGrad}
-            >
-              <Text style={styles.voiceBtnIcon}>🎙</Text>
-            </LinearGradient>
+            <Text style={styles.signOutIcon}>↪</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -286,6 +273,23 @@ export default function DashboardScreen({ navigation }: Props) {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Centered Voice Assistant */}
+      <View style={styles.voiceContainerCentered}>
+        <TouchableOpacity
+          style={styles.voiceBtn}
+          onPress={() => navigation.navigate("Voice")}
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={Colors.brand.gradient as [string, string]}
+            style={styles.voiceBtnGrad}
+          >
+            <Text style={styles.voiceBtnIcon}>🎙</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+        <Text style={styles.voiceBtnLabel}>Talk to Aurora</Text>
+      </View>
     </ScrollView>
   );
 }
@@ -327,23 +331,43 @@ const styles = StyleSheet.create({
     borderColor: Colors.bg.border,
     borderRadius: Radius.full,
     borderWidth: 1,
-    paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.sm,
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  signOutText: {
+  signOutIcon: {
+    fontSize: 25,
+    fontWeight: "bold",
     color: Colors.text.secondary,
-    fontSize: Typography.size.xs,
-    fontWeight: Typography.weight.semibold,
+    textAlign: "center",
+    textAlignVertical: "center",
+    includeFontPadding: false,
   },
 
   voiceBtn: { borderRadius: Radius.full, overflow: "hidden", ...Shadows.glow },
   voiceBtnGrad: {
-    width: 52,
-    height: 52,
+    width: 60,
+    height: 60,
     alignItems: "center",
     justifyContent: "center",
   },
-  voiceBtnIcon: { fontSize: 22 },
+  voiceBtnIcon: { fontSize: 26 },
+
+  voiceContainerCentered: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: Spacing.xxl,
+    paddingBottom: Spacing.xl,
+  },
+  voiceBtnLabel: {
+    marginTop: Spacing.sm,
+    color: Colors.text.secondary,
+    fontSize: Typography.size.xs,
+    fontWeight: Typography.weight.semibold,
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+  },
 
   insightCard: {
     backgroundColor: Colors.bg.secondary,
