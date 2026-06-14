@@ -33,7 +33,16 @@ export default function SignupScreen({ navigation }: Props) {
     }
     setLoading(true);
     try {
-      await authService.signUp(email.trim().toLowerCase(), password);
+      const data = await authService.signUp(email.trim().toLowerCase(), password);
+      if (data && !data.session) {
+        Alert.alert(
+          'Verification Sent',
+          'Please check your inbox and verify your email, then sign in.',
+          [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+        );
+      } else {
+        Alert.alert('Success', 'Account created successfully!');
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Signup failed';
       Alert.alert('Signup failed', message);
