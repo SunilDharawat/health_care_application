@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { LogOut, Droplet, Moon, CheckSquare, Salad, Mic, Sparkles, Target, Award, Crown, Flame, Trophy } from "lucide-react-native";
+import { LogOut, Droplet, Moon, CheckSquare, Salad, Mic, Sparkles, Target, Award, Crown, Flame, Trophy, TrendingUp } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { supabase } from "../../services/supabase";
 import { calculateWellnessScore, type WellnessBreakdown } from "../../utils/wellness";
@@ -251,6 +251,75 @@ export default function DashboardScreen({ navigation }: Props) {
   const hydrationPct = hydration.percentage();
   const habitsPct = habits.percentage();
 
+  const getHydrationPrediction = () => {
+    const goal = profile?.water_goal_ml || 2500;
+    const todayTotal = hydration.todayTotal;
+    
+    if (todayTotal === 0) {
+      return "Log your first glass of water to project today's pace!";
+    }
+    if (todayTotal >= goal) {
+      return `Amazing! You've reached your daily water goal of ${(goal/1000).toFixed(1)}L!`;
+    }
+    
+    const currentHour = new Date().getHours();
+    const startHour = 8; // Assumed wake time
+    let activeHours = currentHour - startHour;
+    if (activeHours <= 0) activeHours = 1;
+    
+    const mlPerHour = todayTotal / activeHours;
+    const hoursNeeded = (goal - todayTotal) / mlPerHour;
+    const targetHour = Math.round(currentHour + hoursNeeded);
+    
+    if (targetHour > 22 || targetHour < 0) {
+      return `At this pace, you'll reach ${(todayTotal/1000).toFixed(1)}L by bedtime. Drink a glass now to catch up!`;
+    }
+    
+    const ampm = targetHour >= 12 ? 'pm' : 'am';
+    const displayHour = targetHour % 12 === 0 ? 12 : targetHour % 12;
+    return `At this pace, you'll reach your daily goal of ${(goal/1000).toFixed(1)}L water by ${displayHour}${ampm} today.`;
+  };
+
+  const getHabitsPrediction = () => {
+    const totalCount = habits.totalCount();
+    const completedCount = habits.completedCount();
+    
+    if (totalCount === 0) {
+      return "Add habits to start tracking today's consistency goals!";
+    }
+    
+    const pct = Math.round((completedCount / totalCount) * 100);
+    if (completedCount === 0) {
+      return `You've completed 0/${totalCount} habits today. Complete the first one to build momentum!`;
+    }
+    if (completedCount === totalCount) {
+      return `Perfect! Completed all ${totalCount} habits today — 100% streak achieved! 🔥`;
+    }
+    
+    return `You've completed ${completedCount}/${totalCount} habits — ${pct}% of today's goal!`;
+  };
+
+  const getSleepPrediction = () => {
+    const sleepGoal = profile?.sleep_goal_hrs || 8;
+    const weeklyAvg = sleep.weeklyAvg;
+    
+    if (!weeklyAvg || weeklyAvg === 0) {
+      return "Log sleep to generate your weekly rest forecast trajectory.";
+    }
+    
+    if (weeklyAvg >= sleepGoal) {
+      return `Averaging ${weeklyAvg}h of sleep/night this week, exceeding your goal. Great recovery!`;
+    }
+    
+    if (sleep.lastNight && sleep.lastNight.duration_hrs > weeklyAvg) {
+      return `Maintaining last night's ${sleep.lastNight.duration_hrs.toFixed(1)}h sleep pace will put you on track for your ${sleepGoal}h goal!`;
+    }
+    
+    const gap = sleepGoal - weeklyAvg;
+    const minsGap = Math.round(gap * 60);
+    return `At this week's pace, adding ${minsGap} mins of sleep tonight gets you closer to your ${sleepGoal}h target.`;
+  };
+
   return (
     <ScrollView
       style={styles.container}
@@ -408,6 +477,28 @@ export default function DashboardScreen({ navigation }: Props) {
           </ScrollView>
         </View>
       )}
+
+      {/* Smart Projections */}
+      <View style={styles.projectionsCard}>
+        <View style={styles.projectionsHeader}>
+          <TrendingUp size={14} color={Colors.brand.secondary} style={{ marginRight: 6 }} />
+          <Text style={styles.projectionsLabel}>SMART PROJECTIONS</Text>
+        </View>
+        <View style={styles.projectionRow}>
+          <Droplet size={16} color={Colors.hydration.primary} style={styles.projectionIcon} />
+          <Text style={styles.projectionText}>{getHydrationPrediction()}</Text>
+        </View>
+        <View style={styles.projectionDivider} />
+        <View style={styles.projectionRow}>
+          <CheckSquare size={16} color={Colors.habits.primary} style={styles.projectionIcon} />
+          <Text style={styles.projectionText}>{getHabitsPrediction()}</Text>
+        </View>
+        <View style={styles.projectionDivider} />
+        <View style={styles.projectionRow}>
+          <Moon size={16} color={Colors.sleep.primary} style={styles.projectionIcon} />
+          <Text style={styles.projectionText}>{getSleepPrediction()}</Text>
+        </View>
+      </View>
 
       {/* Today's insight */}
       {todayInsight && (
@@ -977,5 +1068,46 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: Colors.text.tertiary,
     fontWeight: Typography.weight.medium,
+  },
+
+  // Projections Section
+  projectionsCard: {
+    backgroundColor: Colors.bg.secondary,
+    borderRadius: Radius.xl,
+    padding: Spacing.base,
+    marginBottom: Spacing.base,
+    borderWidth: 1,
+    borderColor: `${Colors.brand.secondary}30`,
+    ...Shadows.card,
+  },
+  projectionsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  projectionsLabel: {
+    fontSize: Typography.size.xs,
+    color: Colors.brand.secondary,
+    fontWeight: Typography.weight.semibold,
+    letterSpacing: 1,
+  },
+  projectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.xs,
+  },
+  projectionIcon: {
+    marginRight: Spacing.sm,
+  },
+  projectionText: {
+    flex: 1,
+    color: Colors.text.secondary,
+    fontSize: Typography.size.sm,
+    lineHeight: 18,
+  },
+  projectionDivider: {
+    height: 1,
+    backgroundColor: `${Colors.bg.border}50`,
+    marginVertical: Spacing.xs,
   },
 });
