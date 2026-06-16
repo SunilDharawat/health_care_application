@@ -135,7 +135,8 @@ export default function VoiceScreen({
     })();
 
     return () => {
-      player.pause();
+      // Note: The useAudioPlayer hook automatically disposes of the player 
+      // and stops playback when the component unmounts.
     };
   }, []);
 
