@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { LogOut, Droplet, Moon, CheckSquare, Salad, Mic } from "lucide-react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { supabase } from "../../services/supabase";
 import { calculateWellnessScore, type WellnessBreakdown } from "../../utils/wellness";
 import {
@@ -161,9 +162,11 @@ export default function DashboardScreen({ navigation }: Props) {
     }
   }, [user, profile]);
 
-  useEffect(() => {
-    loadDashboard();
-  }, [loadDashboard]);
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboard();
+    }, [loadDashboard])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
