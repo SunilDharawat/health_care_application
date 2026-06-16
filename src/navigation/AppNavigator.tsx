@@ -21,17 +21,10 @@ import HabitsScreen from '../screens/habits/HabitsScreen';
 import NutritionScreen from '../screens/nutrition/NutritionScreen';
 import VoiceScreen from '../screens/voice/VoiceScreen';
 
+import { Home, Droplet, Moon, CheckSquare, Salad } from 'lucide-react-native';
+
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
-
-// ── Tab bar icons (text-based, replace with icons later)
-const TAB_ICONS: Record<string, string> = {
-  Home:      '⬡',
-  Water:     '💧',
-  Sleep:     '🌙',
-  Habits:    '✓',
-  Nutrition: '🥗',
-};
 
 function MainTabs() {
   return (
@@ -46,11 +39,23 @@ function MainTabs() {
             {route.name}
           </Text>
         ),
-        tabBarIcon: ({ color }) => (
-          <Text style={[styles.tabIcon, { color }]}>
-            {TAB_ICONS[route.name] || '○'}
-          </Text>
-        ),
+        tabBarIcon: ({ color, size }) => {
+          const iconSize = size ?? 20;
+          switch (route.name) {
+            case 'Home':
+              return <Home size={iconSize} color={color} />;
+            case 'Water':
+              return <Droplet size={iconSize} color={color} />;
+            case 'Sleep':
+              return <Moon size={iconSize} color={color} />;
+            case 'Habits':
+              return <CheckSquare size={iconSize} color={color} />;
+            case 'Nutrition':
+              return <Salad size={iconSize} color={color} />;
+            default:
+              return <Home size={iconSize} color={color} />;
+          }
+        },
       })}
     >
       <Tab.Screen name="Home"      component={DashboardScreen} />
@@ -121,10 +126,6 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     paddingBottom: 10,
     height: 72,
-  },
-  tabIcon: {
-    fontSize: 20,
-    marginBottom: 2,
   },
   tabLabel: {
     fontSize: Typography.size.xs,

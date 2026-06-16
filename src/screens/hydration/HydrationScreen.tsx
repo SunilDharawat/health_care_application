@@ -8,6 +8,7 @@ import { useAuthStore, useHydrationStore } from '../../store';
 import { hydrationService } from '../../services/api';
 import { Colors, Typography, Spacing, Radius, QUICK_ADD_AMOUNTS } from '../../constants/theme';
 import { format } from 'date-fns';
+import { Droplet } from 'lucide-react-native';
 
 export default function HydrationScreen() {
   const { user, profile } = useAuthStore();
@@ -82,6 +83,7 @@ export default function HydrationScreen() {
 
         {/* Progress Display */}
         <View style={styles.statsCard}>
+          <Droplet size={48} color={Colors.hydration.primary} style={{ marginBottom: Spacing.sm }} />
           <Text style={styles.percentageText}>{pct}%</Text>
           <Text style={styles.statLabel}>
             {hydration.todayTotal} ml of {hydration.goal} ml goal

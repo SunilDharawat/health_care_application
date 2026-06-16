@@ -7,6 +7,7 @@ import { useAuthStore, useSleepStore } from '../../store';
 import { sleepService } from '../../services/api';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import { format, parseISO } from 'date-fns';
+import { Moon, Plus, X } from 'lucide-react-native';
 
 export default function SleepScreen() {
   const { user, profile } = useAuthStore();
@@ -96,7 +97,8 @@ export default function SleepScreen() {
             <Text style={styles.subtitle}>Track your rest and recovery</Text>
           </View>
           <TouchableOpacity style={styles.logBtn} onPress={() => setShowLog(true)}>
-            <Text style={styles.logBtnText}>+ Log</Text>
+            <Plus size={14} color={Colors.bg.primary} style={{ marginRight: 4 }} />
+            <Text style={styles.logBtnText}>Log</Text>
           </TouchableOpacity>
         </View>
 
@@ -120,6 +122,7 @@ export default function SleepScreen() {
             </>
           ) : (
             <View style={styles.noSleep}>
+              <Moon size={32} color={Colors.text.tertiary} style={{ marginBottom: Spacing.sm }} />
               <Text style={styles.noSleepText}>No sleep logged yet</Text>
               <TouchableOpacity onPress={() => setShowLog(true)}>
                 <Text style={styles.noSleepLink}>Log last night's sleep →</Text>
@@ -193,7 +196,7 @@ export default function SleepScreen() {
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Log sleep</Text>
             <TouchableOpacity onPress={() => setShowLog(false)}>
-              <Text style={styles.modalClose}>✕</Text>
+              <X size={24} color={Colors.text.secondary} />
             </TouchableOpacity>
           </View>
 
@@ -281,6 +284,8 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
     paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   logBtnText: { color: Colors.bg.primary, fontWeight: Typography.weight.bold, fontSize: Typography.size.sm },
 

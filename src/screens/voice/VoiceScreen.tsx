@@ -23,6 +23,7 @@ import {
 } from "expo-audio";
 import { useAuthStore } from "../../store";
 import { Colors, Typography, Spacing, Radius } from "../../constants/theme";
+import { Mic, Square, X } from "lucide-react-native";
 
 const BACKEND_URL =
   process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:3001";
@@ -397,7 +398,7 @@ export default function VoiceScreen({
           onPress={closeVoiceScreen}
           style={styles.backBtn}
         >
-          <Text style={styles.backText}>✕</Text>
+          <X size={24} color={Colors.text.secondary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Aurora</Text>
         <View style={styles.headerDot}>
@@ -496,10 +497,10 @@ export default function VoiceScreen({
             >
               {voiceState === "processing" ? (
                 <ActivityIndicator color="#fff" size="large" />
+              ) : voiceState === "recording" ? (
+                <Square size={24} color={Colors.white} fill={Colors.white} />
               ) : (
-                <Text style={styles.micIcon}>
-                  {voiceState === "recording" ? "●" : "🎙"}
-                </Text>
+                <Mic size={28} color={Colors.white} />
               )}
             </LinearGradient>
           </TouchableOpacity>
@@ -522,7 +523,6 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.bg.border,
   },
   backBtn: { padding: Spacing.sm },
-  backText: { color: Colors.text.secondary, fontSize: Typography.size.lg },
   headerTitle: {
     fontSize: Typography.size.lg,
     fontWeight: Typography.weight.bold,
@@ -617,5 +617,4 @@ const styles = StyleSheet.create({
   },
   micBtn: { width: 80, height: 80, borderRadius: 40, overflow: "hidden" },
   micGrad: { flex: 1, alignItems: "center", justifyContent: "center" },
-  micIcon: { fontSize: 32 },
 });

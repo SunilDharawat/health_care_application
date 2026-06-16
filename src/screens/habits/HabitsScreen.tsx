@@ -8,6 +8,7 @@ import { useAuthStore, useHabitsStore } from '../../store';
 import { habitsService } from '../../services/api';
 import { Colors, Typography, Spacing, Radius, HABIT_ICONS } from '../../constants/theme';
 import type { HabitWithStatus } from '../../types';
+import { Plus, X, Sparkles, Check } from 'lucide-react-native';
 
 export default function HabitsScreen() {
   const { user } = useAuthStore();
@@ -95,7 +96,8 @@ export default function HabitsScreen() {
             <Text style={styles.subtitle}>Build consistency, one day at a time</Text>
           </View>
           <TouchableOpacity style={styles.addBtn} onPress={() => setShowCreate(true)}>
-            <Text style={styles.addBtnText}>+ New</Text>
+            <Plus size={14} color={Colors.bg.primary} style={{ marginRight: 4 }} />
+            <Text style={styles.addBtnText}>New</Text>
           </TouchableOpacity>
         </View>
 
@@ -114,7 +116,7 @@ export default function HabitsScreen() {
         {/* Habit list */}
         {habits.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>✦</Text>
+            <Sparkles size={40} color={Colors.brand.primary} style={{ marginBottom: Spacing.base }} />
             <Text style={styles.emptyTitle}>No habits yet</Text>
             <Text style={styles.emptySubtitle}>Create your first habit to start building consistency.</Text>
             <TouchableOpacity style={styles.emptyBtn} onPress={() => setShowCreate(true)}>
@@ -155,7 +157,7 @@ export default function HabitsScreen() {
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>New habit</Text>
             <TouchableOpacity onPress={() => setShowCreate(false)}>
-              <Text style={styles.modalClose}>✕</Text>
+              <X size={24} color={Colors.text.secondary} />
             </TouchableOpacity>
           </View>
 
@@ -215,7 +217,7 @@ function HabitRow({
         onPress={onComplete}
         disabled={done || skipped}
       >
-        {done && <Text style={styles.checkMark}>✓</Text>}
+        {done && <Check size={16} color={Colors.bg.primary} strokeWidth={3} />}
       </TouchableOpacity>
 
       <View style={styles.habitInfo}>
@@ -253,6 +255,8 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
     paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   addBtnText: { color: Colors.bg.primary, fontWeight: Typography.weight.bold, fontSize: Typography.size.sm },
 

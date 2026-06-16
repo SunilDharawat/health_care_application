@@ -8,12 +8,20 @@ import { nutritionService } from '../../services/api';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import type { Meal } from '../../types';
 import { format } from 'date-fns';
+import { Sunrise, Sun, Moon, Apple, Plus, X } from 'lucide-react-native';
+
+const MEAL_ICONS = {
+  breakfast: Sunrise,
+  lunch: Sun,
+  dinner: Moon,
+  snack: Apple,
+} as const;
 
 const MEAL_TYPES = [
-  { key: 'breakfast', label: 'Breakfast', icon: '🌅', color: Colors.nutrition.primary },
-  { key: 'lunch',     label: 'Lunch',     icon: '☀️',  color: Colors.hydration.primary },
-  { key: 'dinner',    label: 'Dinner',    icon: '🌙',  color: Colors.sleep.primary },
-  { key: 'snack',     label: 'Snack',     icon: '🍎',  color: Colors.habits.primary },
+  { key: 'breakfast', label: 'Breakfast', color: Colors.nutrition.primary },
+  { key: 'lunch',     label: 'Lunch',     color: Colors.hydration.primary },
+  { key: 'dinner',    label: 'Dinner',    color: Colors.sleep.primary },
+  { key: 'snack',     label: 'Snack',     color: Colors.habits.primary },
 ] as const;
 
 export default function NutritionScreen() {
@@ -114,16 +122,18 @@ export default function NutritionScreen() {
         {/* Meal sections */}
         {MEAL_TYPES.map(mealType => {
           const typeMeals = meals.filter(m => m.meal_type === mealType.key);
+          const IconComponent = MEAL_ICONS[mealType.key];
           return (
             <View key={mealType.key} style={styles.mealSection}>
               <View style={styles.mealSectionHeader}>
-                <Text style={styles.mealTypeIcon}>{mealType.icon}</Text>
+                <IconComponent size={20} color={mealType.color} style={{ marginRight: Spacing.sm }} />
                 <Text style={styles.mealTypeLabel}>{mealType.label}</Text>
                 <TouchableOpacity
                   style={[styles.addMealBtn, { borderColor: mealType.color }]}
                   onPress={() => openAdd(mealType.key)}
                 >
-                  <Text style={[styles.addMealBtnText, { color: mealType.color }]}>+ Add</Text>
+                  <Plus size={12} color={mealType.color} style={{ marginRight: 4 }} />
+                  <Text style={[styles.addMealBtnText, { color: mealType.color }]}>Add</Text>
                 </TouchableOpacity>
               </View>
 
@@ -160,7 +170,7 @@ export default function NutritionScreen() {
               Log {MEAL_TYPES.find(m => m.key === activeMealType)?.label}
             </Text>
             <TouchableOpacity onPress={() => { setShowAdd(false); resetForm(); }}>
-              <Text style={styles.modalClose}>✕</Text>
+              <X size={24} color={Colors.text.secondary} />
             </TouchableOpacity>
           </View>
 
@@ -265,13 +275,14 @@ const styles = StyleSheet.create({
     borderColor: Colors.bg.border,
   },
   mealSectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.sm },
-  mealTypeIcon: { fontSize: 18, marginRight: Spacing.sm },
   mealTypeLabel: { flex: 1, fontSize: Typography.size.base, fontWeight: Typography.weight.semibold, color: Colors.text.primary },
   addMealBtn: {
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
     borderRadius: Radius.sm,
     borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   addMealBtnText: { fontSize: Typography.size.xs, fontWeight: Typography.weight.semibold },
   emptyMealText: { color: Colors.text.tertiary, fontSize: Typography.size.sm, paddingVertical: Spacing.sm },

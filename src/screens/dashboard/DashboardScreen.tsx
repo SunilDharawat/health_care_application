@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { LogOut, Droplet, Moon, CheckSquare, Salad, Mic } from "lucide-react-native";
 import {
   useAuthStore,
   useHydrationStore,
@@ -154,7 +155,7 @@ export default function DashboardScreen({ navigation }: Props) {
             onPress={handleSignOut}
             activeOpacity={0.75}
           >
-            <Text style={styles.signOutIcon}>↪</Text>
+            <LogOut size={20} color={Colors.text.secondary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -174,7 +175,7 @@ export default function DashboardScreen({ navigation }: Props) {
         activeOpacity={0.85}
       >
         <View style={styles.cardHeader}>
-          <Text style={styles.cardIcon}>💧</Text>
+          <Droplet size={20} color={Colors.hydration.primary} style={styles.cardIcon} />
           <Text style={styles.cardTitle}>Hydration</Text>
           <Text style={[styles.cardBadge, { color: Colors.hydration.primary }]}>
             {hydrationPct}%
@@ -204,7 +205,7 @@ export default function DashboardScreen({ navigation }: Props) {
         activeOpacity={0.85}
       >
         <View style={styles.cardHeader}>
-          <Text style={styles.cardIcon}>🌙</Text>
+          <Moon size={20} color={Colors.sleep.primary} style={styles.cardIcon} />
           <Text style={styles.cardTitle}>Sleep</Text>
         </View>
         <View style={styles.sleepStats}>
@@ -238,8 +239,10 @@ export default function DashboardScreen({ navigation }: Props) {
           onPress={() => navigation.navigate("Habits")}
           activeOpacity={0.85}
         >
-          <Text style={[styles.cardIcon, styles.habitsIcon]}>✓</Text>
-          <Text style={styles.cardTitle}>Habits</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.sm }}>
+            <CheckSquare size={20} color={Colors.habits.primary} style={styles.cardIcon} />
+            <Text style={styles.cardTitle}>Habits</Text>
+          </View>
           <Text style={styles.bigStat}>
             {habits.completedCount()}/{habits.totalCount()}
           </Text>
@@ -262,8 +265,10 @@ export default function DashboardScreen({ navigation }: Props) {
           onPress={() => navigation.navigate("Nutrition")}
           activeOpacity={0.85}
         >
-          <Text style={styles.cardIcon}>🥗</Text>
-          <Text style={styles.cardTitle}>Nutrition</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.sm }}>
+            <Salad size={20} color={Colors.nutrition.primary} style={styles.cardIcon} />
+            <Text style={styles.cardTitle}>Nutrition</Text>
+          </View>
           <Text style={styles.bigStat}>{nutrition.todayTotals.calories}</Text>
           <Text style={styles.cardStat}>kcal today</Text>
           <Text style={styles.macroLine}>
@@ -285,7 +290,7 @@ export default function DashboardScreen({ navigation }: Props) {
             colors={Colors.brand.gradient as [string, string]}
             style={styles.voiceBtnGrad}
           >
-            <Text style={styles.voiceBtnIcon}>🎙</Text>
+            <Mic size={24} color={Colors.white} />
           </LinearGradient>
         </TouchableOpacity>
         <Text style={styles.voiceBtnLabel}>Talk to Aurora</Text>
@@ -336,14 +341,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  signOutIcon: {
-    fontSize: 25,
-    fontWeight: "bold",
-    color: Colors.text.secondary,
-    textAlign: "center",
-    textAlignVertical: "center",
-    includeFontPadding: false,
-  },
 
   voiceBtn: { borderRadius: Radius.full, overflow: "hidden", ...Shadows.glow },
   voiceBtnGrad: {
@@ -352,7 +349,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  voiceBtnIcon: { fontSize: 26 },
 
   voiceContainerCentered: {
     alignItems: "center",
@@ -411,8 +407,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: Spacing.base,
   },
-  cardIcon: { fontSize: 20, marginRight: Spacing.sm },
-  habitsIcon: { color: "#FFFFFF" },
+  cardIcon: { marginRight: Spacing.sm },
   cardTitle: {
     flex: 1,
     color: Colors.text.secondary,
