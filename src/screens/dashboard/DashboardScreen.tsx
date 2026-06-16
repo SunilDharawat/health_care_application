@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { LogOut, Droplet, Moon, CheckSquare, Salad, Mic } from "lucide-react-native";
+import { LogOut, Droplet, Moon, CheckSquare, Salad, Mic, Sparkles, Target, Award, Crown, Flame, Trophy } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { supabase } from "../../services/supabase";
 import { calculateWellnessScore, type WellnessBreakdown } from "../../utils/wellness";
@@ -38,6 +38,19 @@ import {
   Shadows,
 } from "../../constants/theme";
 
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:3001";
+
+interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  color: string;
+  unlocked: boolean;
+  progress: number;
+  progressText: string;
+}
+
 interface Props {
   navigation: { navigate: (screen: string) => void };
 }
@@ -55,6 +68,7 @@ export default function DashboardScreen({ navigation }: Props) {
     today: WellnessBreakdown;
     yesterday: WellnessBreakdown;
   } | null>(null);
+  const [achievements, setAchievements] = React.useState<Achievement[]>([]);
 
   const loadDashboard = useCallback(async () => {
     if (!user) return;
@@ -116,7 +130,23 @@ export default function DashboardScreen({ navigation }: Props) {
       sleep.setWeeklyAvg(weeklyAvg);
       habits.setHabits(todayHabits);
       nutrition.setTotals(nutrition_data);
-      setInsight(insight);
+      // Check if we need to generate a new daily AI insight
+      let activeInsight = insight;
+      if (!insight) {
+        try {
+          const response = await fetch(`${BACKEND_URL}/api/insights/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.id }),
+          });
+          if (response.ok) {
+            activeInsight = await response.json();
+          }
+        } catch (err) {
+          console.error("Failed to generate AI insight:", err);
+        }
+      }
+      setInsight(activeInsight);
 
       // Calculate yesterday's stats
       const yHydrationTotal = (yesterdayHydration || []).reduce((sum, item) => sum + item.amount_ml, 0);
@@ -154,6 +184,17 @@ export default function DashboardScreen({ navigation }: Props) {
         today: todayScore,
         yesterday: yesterdayScore,
       });
+
+      // Fetch achievements
+      try {
+        const achResponse = await fetch(`${BACKEND_URL}/api/achievements/${user.id}`);
+        if (achResponse.ok) {
+          const achData = await achResponse.json();
+          setAchievements(achData);
+        }
+      } catch (achErr) {
+        console.error("Failed to load achievements:", achErr);
+      }
     } catch (err) {
       console.error("Dashboard load error:", err);
     } finally {
@@ -317,10 +358,64 @@ export default function DashboardScreen({ navigation }: Props) {
         </View>
       )}
 
+      {/* Achievements Section */}
+      {achievements.length > 0 && (
+        <View style={styles.achievementsSection}>
+          <Text style={styles.sectionHeaderTitle}>ACHIEVEMENTS</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.achievementsScroll}
+          >
+            {achievements.map((ach) => (
+              <View 
+                key={ach.id} 
+                style={[
+                  styles.achievementBadgeCard, 
+                  ach.unlocked ? styles.badgeUnlocked : styles.badgeLocked,
+                  ach.unlocked && { borderColor: `${ach.color}35` }
+                ]}
+              >
+                <View 
+                  style={[
+                    styles.badgeIconBg, 
+                    ach.unlocked ? { backgroundColor: `${ach.color}15` } : styles.badgeIconBgLocked
+                  ]}
+                >
+                  {getAchievementIcon(ach.icon, ach.color, ach.unlocked)}
+                </View>
+                <Text style={[styles.badgeTitle, ach.unlocked ? styles.badgeTitleUnlocked : styles.badgeTitleLocked]}>
+                  {ach.title}
+                </Text>
+                <Text style={styles.badgeDesc} numberOfLines={2}>
+                  {ach.description}
+                </Text>
+                <View style={styles.badgeProgressContainer}>
+                  <View style={styles.badgeProgressBarBg}>
+                    <View 
+                      style={[
+                        styles.badgeProgressBarFill, 
+                        { width: `${ach.progress * 100}%`, backgroundColor: ach.unlocked ? ach.color : Colors.text.tertiary }
+                      ]} 
+                    />
+                  </View>
+                  <Text style={[styles.badgeProgressText, ach.unlocked && { color: ach.color }]}>
+                    {ach.progressText}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
       {/* Today's insight */}
       {todayInsight && (
         <View style={styles.insightCard}>
-          <Text style={styles.insightLabel}>✦ TODAY'S INSIGHT</Text>
+          <View style={styles.insightHeader}>
+            <Sparkles size={14} color={Colors.brand.primary} style={{ marginRight: 6 }} />
+            <Text style={styles.insightLabel}>TODAY'S AI INSIGHT</Text>
+          </View>
           <Text style={styles.insightText}>{todayInsight.insight}</Text>
         </View>
       )}
@@ -471,6 +566,26 @@ function BreakdownRow({ label, value, color, IconComponent }: { label: string; v
   );
 }
 
+function getAchievementIcon(iconName: string, color: string, unlocked: boolean) {
+  const size = 22;
+  const iconColor = unlocked ? color : Colors.text.tertiary;
+
+  switch (iconName) {
+    case "Target":
+      return <Target size={size} color={iconColor} />;
+    case "Award":
+      return <Award size={size} color={iconColor} />;
+    case "Crown":
+      return <Crown size={size} color={iconColor} />;
+    case "Flame":
+      return <Flame size={size} color={iconColor} />;
+    case "Trophy":
+      return <Trophy size={size} color={iconColor} />;
+    default:
+      return <Target size={size} color={iconColor} />;
+  }
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg.primary },
   content: {
@@ -545,14 +660,18 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: Colors.brand.primary,
     borderWidth: 1,
-    borderColor: Colors.bg.border,
+    borderColor: '#7C6FF730',
+  },
+  insightHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.xs,
   },
   insightLabel: {
     fontSize: Typography.size.xs,
     color: Colors.brand.primary,
     fontWeight: Typography.weight.semibold,
     letterSpacing: 1,
-    marginBottom: Spacing.xs,
   },
   insightText: {
     color: Colors.text.primary,
@@ -771,5 +890,92 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.sm,
     fontWeight: Typography.weight.bold,
     textAlign: 'right',
+  },
+
+  // Achievements Section
+  achievementsSection: {
+    marginBottom: Spacing.base,
+  },
+  sectionHeaderTitle: {
+    fontSize: 10,
+    fontWeight: Typography.weight.bold,
+    color: Colors.text.tertiary,
+    letterSpacing: 1,
+    marginBottom: Spacing.sm,
+    textTransform: 'uppercase',
+  },
+  achievementsScroll: {
+    paddingRight: Spacing.xl,
+  },
+  achievementBadgeCard: {
+    backgroundColor: Colors.bg.secondary,
+    borderRadius: Radius.xl,
+    padding: Spacing.md,
+    marginRight: Spacing.sm,
+    borderWidth: 1.5,
+    width: 140,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadows.card,
+  },
+  badgeUnlocked: {
+    opacity: 1,
+  },
+  badgeLocked: {
+    opacity: 0.55,
+    borderColor: Colors.bg.border,
+  },
+  badgeIconBg: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.xs,
+  },
+  badgeIconBgLocked: {
+    backgroundColor: `${Colors.bg.border}50`,
+  },
+  badgeTitle: {
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.bold,
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  badgeTitleUnlocked: {
+    color: Colors.text.primary,
+  },
+  badgeTitleLocked: {
+    color: Colors.text.secondary,
+  },
+  badgeDesc: {
+    fontSize: 10,
+    color: Colors.text.tertiary,
+    textAlign: 'center',
+    lineHeight: 13,
+    height: 26,
+    marginBottom: Spacing.xs,
+  },
+  badgeProgressContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginTop: Spacing.xs,
+  },
+  badgeProgressBarBg: {
+    width: '100%',
+    height: 4,
+    backgroundColor: Colors.bg.border,
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  badgeProgressBarFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  badgeProgressText: {
+    fontSize: 9,
+    color: Colors.text.tertiary,
+    fontWeight: Typography.weight.medium,
   },
 });
