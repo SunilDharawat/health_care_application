@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet,
-  TouchableOpacity, Alert, Modal, ActivityIndicator,
+  TouchableOpacity, Alert, Modal, ActivityIndicator, PanResponder,
 } from 'react-native';
 import { useAuthStore, useSleepStore } from '../../store';
 import { sleepService } from '../../services/api';
@@ -9,8 +9,27 @@ import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import { format, parseISO } from 'date-fns';
 import { Moon, Plus, X } from 'lucide-react-native';
 
-export default function SleepScreen() {
+export default function SleepScreen({ navigation }: { navigation: any }) {
   const { user, profile } = useAuthStore();
+
+  // Swipe tab navigation gesture responder
+  const panResponder = React.useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return Math.abs(gestureState.dx) > 80 && Math.abs(gestureState.dy) < 40;
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        if (gestureState.dx < -80) {
+          // Swipe left navigates to Habits
+          navigation.navigate('Habits');
+        } else if (gestureState.dx > 80) {
+          // Swipe right navigates to Water (Hydration)
+          navigation.navigate('Water');
+        }
+      },
+    })
+  ).current;
   const { lastNight, weeklyAvg, history, setLastNight, setWeeklyAvg, setHistory } = useSleepStore();
   const [loading, setLoading] = useState(true);
   const [showLog, setShowLog] = useState(false);
@@ -88,7 +107,7 @@ export default function SleepScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} {...panResponder.panHandlers}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>

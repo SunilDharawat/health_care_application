@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet,
-  TouchableOpacity, TextInput, Alert, Animated, Easing,
+  TouchableOpacity, TextInput, Alert, Animated, Easing, PanResponder,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useAuthStore, useHydrationStore } from '../../store';
@@ -10,16 +10,17 @@ import { Colors, Typography, Spacing, Radius, QUICK_ADD_AMOUNTS } from '../../co
 import { format } from 'date-fns';
 import { Droplet } from 'lucide-react-native';
 
-export default function HydrationScreen() {
+export default function HydrationScreen({ navigation }: { navigation: any }) {
   const { user, profile } = useAuthStore();
   const hydration = useHydrationStore();
   const [customAmount, setCustomAmount] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const fillAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const pct = hydration.percentage();
 
-  // Animate bottle fill
+  // Animate bottle fill and check celebration
   useEffect(() => {
     Animated.timing(fillAnim, {
       toValue: pct / 100,
@@ -27,7 +28,43 @@ export default function HydrationScreen() {
       easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
     }).start();
+
+    if (pct >= 100) {
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1.18,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1.0,
+          friction: 4,
+          tension: 40,
+          useNativeDriver: true,
+        })
+      ]).start();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
   }, [pct]);
+
+  // Swipe tab navigation gesture responder
+  const panResponder = React.useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return Math.abs(gestureState.dx) > 80 && Math.abs(gestureState.dy) < 40;
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        if (gestureState.dx < -80) {
+          // Swipe left navigates to Sleep
+          navigation.navigate('Sleep');
+        } else if (gestureState.dx > 80) {
+          // Swipe right navigates to Home
+          navigation.navigate('Home');
+        }
+      },
+    })
+  ).current;
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -73,7 +110,7 @@ export default function HydrationScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} {...panResponder.panHandlers}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
@@ -81,10 +118,30 @@ export default function HydrationScreen() {
           <Text style={styles.subtitle}>Track your daily water intake</Text>
         </View>
 
-        {/* Progress Display */}
+        {/* Progress Display (Visual Bottle) */}
         <View style={styles.statsCard}>
-          <Droplet size={48} color={Colors.hydration.primary} style={{ marginBottom: Spacing.sm }} />
-          <Text style={styles.percentageText}>{pct}%</Text>
+          <Animated.View style={[styles.bottleContainer, { transform: [{ scale: scaleAnim }] }]}>
+            {/* Bottle Cap */}
+            <View style={styles.bottleCap} />
+            {/* Bottle Neck */}
+            <View style={styles.bottleNeck} />
+            {/* Bottle Body */}
+            <View style={styles.bottleBody}>
+              <Animated.View 
+                style={[
+                  styles.bottleFill, 
+                  { 
+                    height: fillAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0%', '100%']
+                    }) 
+                  }
+                ]}
+              />
+              {/* Percentage Text Overlay */}
+              <Text style={styles.bottleText}>{pct}%</Text>
+            </View>
+          </Animated.View>
           <Text style={styles.statLabel}>
             {hydration.todayTotal} ml of {hydration.goal} ml goal
           </Text>
@@ -154,7 +211,57 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.bg.border,
   },
-  percentageText: { fontSize: Typography.size.hero, fontWeight: Typography.weight.bold, color: Colors.hydration.primary },
+  bottleContainer: {
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    marginTop: Spacing.xs,
+  },
+  bottleCap: {
+    width: 24,
+    height: 10,
+    backgroundColor: '#78909C',
+    borderRadius: Radius.sm - 4,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  bottleNeck: {
+    width: 36,
+    height: 12,
+    backgroundColor: Colors.bg.secondary,
+    borderLeftWidth: 3,
+    borderRightWidth: 3,
+    borderTopWidth: 1,
+    borderColor: '#78909C',
+  },
+  bottleBody: {
+    width: 90,
+    height: 170,
+    backgroundColor: Colors.bg.primary,
+    borderWidth: 3,
+    borderColor: '#78909C',
+    borderRadius: 22,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  bottleFill: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.hydration.primary,
+    opacity: 0.85,
+  },
+  bottleText: {
+    fontSize: Typography.size.lg,
+    fontWeight: Typography.weight.bold,
+    color: Colors.white,
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+    zIndex: 1,
+  },
   statLabel: { fontSize: Typography.size.md, color: Colors.text.secondary, marginTop: Spacing.sm },
   sectionTitle: { fontSize: Typography.size.lg, fontWeight: Typography.weight.bold, color: Colors.text.primary, marginBottom: Spacing.md, marginTop: Spacing.lg },
   quickAddRow: { flexDirection: 'row', justifyContent: 'space-between', gap: Spacing.sm, marginBottom: Spacing.lg },

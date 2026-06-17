@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet,
-  TouchableOpacity, Modal, TextInput, Alert, ActivityIndicator,
+  TouchableOpacity, Modal, TextInput, Alert, ActivityIndicator, PanResponder,
 } from 'react-native';
 import { useAuthStore, useNutritionStore } from '../../store';
 import { nutritionService } from '../../services/api';
@@ -24,8 +24,24 @@ const MEAL_TYPES = [
   { key: 'snack',     label: 'Snack',     color: Colors.habits.primary },
 ] as const;
 
-export default function NutritionScreen() {
+export default function NutritionScreen({ navigation }: { navigation: any }) {
   const { user } = useAuthStore();
+
+  // Swipe tab navigation gesture responder
+  const panResponder = React.useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return Math.abs(gestureState.dx) > 80 && Math.abs(gestureState.dy) < 40;
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        if (gestureState.dx > 80) {
+          // Swipe right navigates back to Habits
+          navigation.navigate('Habits');
+        }
+      },
+    })
+  ).current;
   const { meals, todayTotals, setMeals, addMeal, setTotals } = useNutritionStore();
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
@@ -95,7 +111,7 @@ export default function NutritionScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} {...panResponder.panHandlers}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>

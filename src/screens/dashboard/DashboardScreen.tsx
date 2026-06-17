@@ -8,6 +8,9 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  PanResponder,
+  Animated,
+  Easing,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { LogOut, Droplet, Moon, CheckSquare, Salad, Mic, Sparkles, Target, Award, Crown, Flame, Trophy, TrendingUp } from "lucide-react-native";
@@ -69,6 +72,47 @@ export default function DashboardScreen({ navigation }: Props) {
     yesterday: WellnessBreakdown;
   } | null>(null);
   const [achievements, setAchievements] = React.useState<Achievement[]>([]);
+
+  // Wellness Score dynamic count-up ticker state
+  const [displayScore, setDisplayScore] = React.useState(0);
+  const scoreAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    const listenerId = scoreAnim.addListener((state) => {
+      setDisplayScore(Math.round(state.value));
+    });
+    return () => {
+      scoreAnim.removeListener(listenerId);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (scores?.today?.overall !== undefined) {
+      Animated.timing(scoreAnim, {
+        toValue: scores.today.overall,
+        duration: 1200,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [scores?.today?.overall]);
+
+  // Swipe tab navigation gesture responder
+  const panResponder = React.useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        // Horizontal swipe: delta x > 80, vertical drift < 40
+        return Math.abs(gestureState.dx) > 80 && Math.abs(gestureState.dy) < 40;
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        if (gestureState.dx < -80) {
+          // Swipe left navigates to Water tab
+          navigation.navigate('Water');
+        }
+      },
+    })
+  ).current;
 
   const loadDashboard = useCallback(async () => {
     if (!user) return;
@@ -321,8 +365,9 @@ export default function DashboardScreen({ navigation }: Props) {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
+    <View style={{ flex: 1 }} {...panResponder.panHandlers}>
+      <ScrollView
+        style={styles.container}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
       refreshControl={
@@ -360,7 +405,7 @@ export default function DashboardScreen({ navigation }: Props) {
                 colors={['#7C6FF725', '#5B8FF910']}
                 style={styles.scoreCircle}
               >
-                <Text style={styles.scoreNum}>{scores.today.overall}</Text>
+                <Text style={styles.scoreNum}>{displayScore}</Text>
                 <Text style={styles.scoreLabel}>SCORE</Text>
               </LinearGradient>
             </View>
@@ -639,6 +684,7 @@ export default function DashboardScreen({ navigation }: Props) {
         <Text style={styles.voiceBtnLabel}>Talk to Aurora</Text>
       </View>
     </ScrollView>
+    </View>
   );
 }
 

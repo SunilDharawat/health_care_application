@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet,
-  TouchableOpacity, Alert, Modal, TextInput, ActivityIndicator,
+  TouchableOpacity, Alert, Modal, TextInput, ActivityIndicator, PanResponder, Animated, Easing,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useAuthStore, useHabitsStore } from '../../store';
@@ -10,7 +10,7 @@ import { Colors, Typography, Spacing, Radius, HABIT_ICONS } from '../../constant
 import type { HabitWithStatus } from '../../types';
 import { Plus, X, Sparkles, Check } from 'lucide-react-native';
 
-export default function HabitsScreen() {
+export default function HabitsScreen({ navigation }: { navigation: any }) {
   const { user } = useAuthStore();
   const { habits, setHabits, markComplete, completedCount, totalCount, percentage } = useHabitsStore();
   const [loading, setLoading] = useState(true);
@@ -18,6 +18,92 @@ export default function HabitsScreen() {
   const [newHabitName, setNewHabitName] = useState('');
   const [newHabitIcon, setNewHabitIcon] = useState('star');
   const [creating, setCreating] = useState(false);
+
+  // Confetti particles state
+  const [confetti, setConfetti] = useState<{
+    id: number;
+    translateX: Animated.Value;
+    translateY: Animated.Value;
+    opacity: Animated.Value;
+    scale: Animated.Value;
+    color: string;
+    size: number;
+    shape: 'circle' | 'square';
+    left: number;
+    top: number;
+  }[]>([]);
+
+  const triggerConfetti = () => {
+    const colors = ['#FFD700', '#FF5722', '#4CAF50', '#2196F3', '#9C27B0', '#E91E63', '#00BCD4'];
+    const newConfetti = Array.from({ length: 35 }).map((_, i) => {
+      return {
+        id: Math.random() + i,
+        translateX: new Animated.Value(0),
+        translateY: new Animated.Value(0),
+        opacity: new Animated.Value(1),
+        scale: new Animated.Value(Math.random() * 0.6 + 0.4),
+        color: colors[Math.floor(Math.random() * colors.length)],
+        size: Math.random() * 8 + 6,
+        shape: Math.random() > 0.5 ? ('circle' as const) : ('square' as const),
+        left: Math.random() * 260 + 50, // Spawn horizontally
+        top: 250, // Spawn vertically in the middle of screen
+      };
+    });
+
+    setConfetti(prev => [...prev, ...newConfetti]);
+
+    const animations = newConfetti.map(c => {
+      const targetY = Math.random() * -300 - 150; // Explode upwards
+      const targetX = (Math.random() - 0.5) * 200; // Drift sideways
+      
+      return Animated.parallel([
+        Animated.timing(c.translateY, {
+          toValue: targetY,
+          duration: 1200 + Math.random() * 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(c.translateX, {
+          toValue: targetX,
+          duration: 1200 + Math.random() * 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(c.opacity, {
+          toValue: 0,
+          duration: 900 + Math.random() * 400,
+          delay: 400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(c.scale, {
+          toValue: 0.1,
+          duration: 1200 + Math.random() * 600,
+          useNativeDriver: true,
+        })
+      ]);
+    });
+
+    Animated.parallel(animations).start(() => {
+      setConfetti(prev => prev.filter(item => !newConfetti.find(nc => nc.id === item.id)));
+    });
+  };
+
+  // Swipe tab navigation gesture responder
+  const panResponder = React.useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return Math.abs(gestureState.dx) > 80 && Math.abs(gestureState.dy) < 40;
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        if (gestureState.dx < -80) {
+          // Swipe left navigates to Nutrition
+          navigation.navigate('Nutrition');
+        } else if (gestureState.dx > 80) {
+          // Swipe right navigates to Sleep
+          navigation.navigate('Sleep');
+        }
+      },
+    })
+  ).current;
 
   const loadHabits = useCallback(async () => {
     if (!user) return;
@@ -35,6 +121,7 @@ export default function HabitsScreen() {
 
   const handleComplete = async (habit: HabitWithStatus) => {
     if (habit.completed_today || !user) return;
+    triggerConfetti();
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     markComplete(habit.id);
     try {
@@ -87,7 +174,7 @@ export default function HabitsScreen() {
   const pct = percentage();
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} {...panResponder.panHandlers}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
@@ -196,6 +283,30 @@ export default function HabitsScreen() {
           </TouchableOpacity>
         </View>
       </Modal>
+
+      {/* Confetti particles */}
+      {confetti.map(c => (
+        <Animated.View
+          key={c.id}
+          style={[
+            styles.confettiParticle,
+            {
+              backgroundColor: c.color,
+              width: c.size,
+              height: c.size,
+              borderRadius: c.shape === 'circle' ? c.size / 2 : 2,
+              left: c.left,
+              top: c.top,
+              opacity: c.opacity,
+              transform: [
+                { translateX: c.translateX },
+                { translateY: c.translateY },
+                { scale: c.scale },
+              ],
+            },
+          ]}
+        />
+      ))}
     </View>
   );
 }
@@ -388,4 +499,9 @@ const styles = StyleSheet.create({
   },
   createBtnDisabled: { opacity: 0.5 },
   createBtnText: { color: Colors.bg.primary, fontWeight: Typography.weight.bold, fontSize: Typography.size.base },
+  confettiParticle: {
+    position: 'absolute',
+    pointerEvents: 'none',
+    zIndex: 9999,
+  },
 });
