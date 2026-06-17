@@ -40,8 +40,10 @@ type VoiceState = "idle" | "recording" | "processing" | "speaking";
 
 export default function VoiceScreen({
   navigation,
+  route,
 }: {
   navigation: { canGoBack: () => boolean; goBack: () => void; navigate: (screen: string) => void };
+  route: { params?: { initialPrompt?: string } };
 }) {
   const { user } = useAuthStore();
   const [voiceState, setVoiceState] = useState<VoiceState>("idle");
@@ -134,11 +136,56 @@ export default function VoiceScreen({
       }
     })();
 
-    return () => {
-      // Note: The useAudioPlayer hook automatically disposes of the player 
-      // and stops playback when the component unmounts.
-    };
   }, []);
+
+  const sendTextQuery = async (promptText: string) => {
+    setVoiceState("processing");
+    addMessage("user", promptText);
+    try {
+      console.log("[Voice] Sending text prompt to backend:", promptText);
+      const response = await fetch(`${BACKEND_URL}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: promptText,
+          userId: user?.id,
+        }),
+      });
+
+      if (!response.ok) throw new Error(`Backend error: ${response.status}`);
+      const data = await response.json();
+      console.log("[Voice] Backend response for text prompt:", data);
+
+      const { reply, action, audioBase64 } = data;
+      addMessage("aurora", reply, action);
+
+      if (audioBase64) {
+        console.log("[Voice] Playing audio response...");
+        setVoiceState("speaking");
+        await playAudio(audioBase64);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[Voice] Text query error:", err);
+      addMessage(
+        "aurora",
+        "Sorry, I had trouble processing that prompt. Please try again.",
+      );
+      Alert.alert("Error", msg);
+    } finally {
+      setVoiceState("idle");
+    }
+  };
+
+  useEffect(() => {
+    const initialPrompt = route.params?.initialPrompt;
+    if (initialPrompt && user && audioReady) {
+      const timer = setTimeout(() => {
+        sendTextQuery(initialPrompt);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [route.params?.initialPrompt, user, audioReady]);
 
   const addMessage = useCallback(
     (role: "user" | "aurora", text: string, action?: string) => {

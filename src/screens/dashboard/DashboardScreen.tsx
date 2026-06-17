@@ -13,10 +13,11 @@ import {
   Easing,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { LogOut, Droplet, Moon, CheckSquare, Salad, Mic, Sparkles, Target, Award, Crown, Flame, Trophy, TrendingUp } from "lucide-react-native";
+import { LogOut, Droplet, Moon, CheckSquare, Salad, Mic, Sparkles, Target, Award, Crown, Flame, Trophy, TrendingUp, Lightbulb } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { supabase } from "../../services/supabase";
 import { calculateWellnessScore, type WellnessBreakdown } from "../../utils/wellness";
+import { generateSmartPrompts, getSmartGreeting } from "../../utils/prompts";
 import {
   useAuthStore,
   useHydrationStore,
@@ -55,7 +56,7 @@ interface Achievement {
 }
 
 interface Props {
-  navigation: { navigate: (screen: string) => void };
+  navigation: { navigate: (screen: string, params?: any) => void };
 }
 
 export default function DashboardScreen({ navigation }: Props) {
@@ -364,6 +365,24 @@ export default function DashboardScreen({ navigation }: Props) {
     return `At this week's pace, adding ${minsGap} mins of sleep tonight gets you closer to your ${sleepGoal}h target.`;
   };
 
+  const todayStats = {
+    hydrationPct: hydrationPct,
+    sleepHrs: sleep.lastNight ? sleep.lastNight.duration_hrs : 0,
+    sleepPct: (profile?.sleep_goal_hrs || 8) > 0 ? ((sleep.lastNight ? sleep.lastNight.duration_hrs : 0) / (profile?.sleep_goal_hrs || 8)) * 100 : 0,
+    habitsCompleted: habits.completedCount(),
+    habitsTotal: habits.totalCount(),
+    habitsPct: habitsPct,
+    nutritionCalories: nutrition.todayTotals.calories,
+    nutritionLogged: nutrition.todayTotals.calories > 0,
+  };
+
+  const smartPrompts = generateSmartPrompts(profile, todayStats);
+  const smartGreeting = getSmartGreeting(profile?.name || "there", {
+    hydrationPct: hydrationPct,
+    habitsPct: habitsPct,
+    sleepHrs: sleep.lastNight ? sleep.lastNight.duration_hrs : 0,
+  });
+
   return (
     <View style={{ flex: 1 }} {...panResponder.panHandlers}>
       <ScrollView
@@ -396,22 +415,50 @@ export default function DashboardScreen({ navigation }: Props) {
       </View>
 
       {/* Horizontal AI Assistant Bar */}
-      <TouchableOpacity
-        style={styles.aiAssistantBar}
-        onPress={() => navigation.navigate("Voice")}
-        activeOpacity={0.85}
-      >
-        <View style={styles.aiAssistantLeft}>
-          <Sparkles size={16} color={Colors.brand.primary} style={{ marginRight: Spacing.sm }} />
-          <Text style={styles.aiAssistantText}>Speak to Aurora AI Companion...</Text>
+      <View style={styles.aiAssistantBar}>
+        {/* Top row: sparks + title + mic icon */}
+        <View style={styles.aiAssistantHeaderRow}>
+          <View style={styles.aiAssistantLeft}>
+            <Sparkles size={16} color={Colors.brand.primary} style={{ marginRight: Spacing.xs }} />
+            <Text style={styles.aiAssistantTitle}>Aurora AI Companion</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("Voice")}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={Colors.brand.gradient as [string, string]}
+              style={styles.aiAssistantMicBtn}
+            >
+              <Mic size={16} color={Colors.white} />
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
-        <LinearGradient
-          colors={Colors.brand.gradient as [string, string]}
-          style={styles.aiAssistantMicBtn}
-        >
-          <Mic size={16} color={Colors.white} />
-        </LinearGradient>
-      </TouchableOpacity>
+
+        <View style={styles.aiAssistantHintRow}>
+          <Lightbulb size={12} color={Colors.text.secondary} style={{ marginRight: 4 }} />
+          <Text style={styles.aiAssistantHint}>Try asking:</Text>
+        </View>
+
+        {/* Dynamic Context-Aware Prompt Suggestions */}
+        <View style={styles.smartPromptsList}>
+          {smartPrompts.map((prompt, idx) => (
+            <TouchableOpacity
+              key={idx}
+              style={styles.smartPromptItem}
+              onPress={() => navigation.navigate("Voice", { initialPrompt: prompt.text })}
+              activeOpacity={0.75}
+            >
+              <View style={styles.smartPromptIconContainer}>
+                {getPromptIcon(prompt.icon, prompt.category)}
+              </View>
+              <Text style={styles.smartPromptText} numberOfLines={1}>
+                "{prompt.text}"
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
 
       {/* Wellness Score Card */}
       {scores && (
@@ -724,6 +771,33 @@ function getAchievementIcon(iconName: string, color: string, unlocked: boolean) 
   }
 }
 
+function getPromptIcon(iconName: string, category: string) {
+  const size = 14;
+  let color = Colors.brand.primary;
+  
+  if (category === 'hydration') color = Colors.hydration.primary;
+  else if (category === 'sleep') color = Colors.sleep.primary;
+  else if (category === 'habits') color = Colors.habits.primary;
+  else if (category === 'nutrition') color = Colors.nutrition.primary;
+
+  switch (iconName) {
+    case "Droplet":
+      return <Droplet size={size} color={color} />;
+    case "Moon":
+      return <Moon size={size} color={color} />;
+    case "CheckSquare":
+      return <CheckSquare size={size} color={color} />;
+    case "Salad":
+      return <Salad size={size} color={color} />;
+    case "Target":
+      return <Target size={size} color={color} />;
+    case "Sparkles":
+      return <Sparkles size={size} color={color} />;
+    default:
+      return <Sparkles size={size} color={color} />;
+  }
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg.primary },
   content: {
@@ -768,30 +842,71 @@ const styles = StyleSheet.create({
   },
 
   aiAssistantBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: Colors.bg.secondary,
     borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.md,
+    padding: Spacing.base,
     marginBottom: Spacing.base,
     borderWidth: 1,
     borderColor: `${Colors.brand.primary}30`,
     ...Shadows.card,
   },
+  aiAssistantHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+  },
   aiAssistantLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  aiAssistantText: {
+  aiAssistantTitle: {
+    color: Colors.brand.primary,
+    fontSize: Typography.size.xs,
+    fontWeight: Typography.weight.bold,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  aiAssistantHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.xs,
+    marginTop: Spacing.xs,
+  },
+  aiAssistantHint: {
     color: Colors.text.secondary,
+    fontSize: Typography.size.xs,
+    fontWeight: Typography.weight.semibold,
+  },
+  smartPromptsList: {
+    gap: Spacing.xs,
+  },
+  smartPromptItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.bg.primary,
+    borderColor: Colors.bg.border,
+    borderWidth: 1,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.base,
+    marginTop: Spacing.xs,
+  },
+  smartPromptIconContainer: {
+    marginRight: Spacing.sm,
+    width: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  smartPromptText: {
+    flex: 1,
+    color: Colors.text.primary,
     fontSize: Typography.size.sm,
     fontWeight: Typography.weight.medium,
   },
   aiAssistantMicBtn: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     borderRadius: Radius.full,
     alignItems: 'center',
     justifyContent: 'center',
