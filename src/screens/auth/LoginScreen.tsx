@@ -5,8 +5,14 @@ import {
   ActivityIndicator, Alert, ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
+import { Globe } from 'lucide-react-native';
+import { supabase } from '../../services/supabase';
 import { authService } from '../../services/api';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
+
+WebBrowser.maybeCompleteAuthSession();
 
 interface Props {
   navigation: { navigate: (screen: string) => void };
@@ -16,6 +22,75 @@ export default function LoginScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      const redirectUrl = Linking.createURL('auth-callback');
+      console.log('[Auth] Google OAuth redirectUrl:', redirectUrl);
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.url) throw new Error('No authentication URL returned from Supabase.');
+
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+
+      if (result.type === 'success' && result.url) {
+        console.log('[Auth] Redirect URL captured:', result.url);
+        const parsed = Linking.parse(result.url);
+        let accessToken: string | undefined;
+        let refreshToken: string | undefined;
+
+        const rawAccessToken = parsed.queryParams?.access_token;
+        const rawRefreshToken = parsed.queryParams?.refresh_token;
+
+        if (typeof rawAccessToken === 'string') {
+          accessToken = rawAccessToken;
+        } else if (Array.isArray(rawAccessToken)) {
+          accessToken = rawAccessToken[0];
+        }
+
+        if (typeof rawRefreshToken === 'string') {
+          refreshToken = rawRefreshToken;
+        } else if (Array.isArray(rawRefreshToken)) {
+          refreshToken = rawRefreshToken[0];
+        }
+
+        if (!accessToken || !refreshToken) {
+          const hash = result.url.split('#')[1];
+          if (hash) {
+            const params = new URLSearchParams(hash);
+            accessToken = params.get('access_token') || undefined;
+            refreshToken = params.get('refresh_token') || undefined;
+          }
+        }
+
+        if (accessToken && refreshToken) {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (sessionError) throw sessionError;
+          console.log('[Auth] Google Session established successfully.');
+        } else {
+          throw new Error('Failed to parse access credentials from redirect.');
+        }
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Google sign-in failed';
+      console.error('[Auth] Google login error:', err);
+      Alert.alert('Google login failed', message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -92,6 +167,24 @@ export default function LoginScreen({ navigation }: Props) {
                 : <Text style={styles.btnText}>Sign in</Text>
               }
             </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Divider */}
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Google Button */}
+          <TouchableOpacity
+            style={[styles.socialBtn, loading && styles.socialBtnDisabled]}
+            onPress={handleGoogleLogin}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            <Globe size={18} color={Colors.text.primary} />
+            <Text style={styles.socialText}>Continue with Google</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -198,5 +291,41 @@ const styles = StyleSheet.create({
   switchAction: {
     color: Colors.brand.primary,
     fontWeight: Typography.weight.semibold,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: Spacing.xl,
+    gap: Spacing.sm,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.bg.border,
+  },
+  dividerText: {
+    color: Colors.text.tertiary,
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.medium,
+  },
+  socialBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.base,
+    borderRadius: Radius.lg,
+    marginBottom: Spacing.sm,
+    backgroundColor: Colors.bg.tertiary,
+    borderWidth: 1,
+    borderColor: Colors.bg.border,
+    gap: Spacing.sm,
+  },
+  socialBtnDisabled: {
+    opacity: 0.6,
+  },
+  socialText: {
+    color: Colors.text.primary,
+    fontWeight: Typography.weight.semibold,
+    fontSize: Typography.size.base,
   },
 });
