@@ -395,6 +395,24 @@ export default function DashboardScreen({ navigation }: Props) {
         </View>
       </View>
 
+      {/* Horizontal AI Assistant Bar */}
+      <TouchableOpacity
+        style={styles.aiAssistantBar}
+        onPress={() => navigation.navigate("Voice")}
+        activeOpacity={0.85}
+      >
+        <View style={styles.aiAssistantLeft}>
+          <Sparkles size={16} color={Colors.brand.primary} style={{ marginRight: Spacing.sm }} />
+          <Text style={styles.aiAssistantText}>Speak to Aurora AI Companion...</Text>
+        </View>
+        <LinearGradient
+          colors={Colors.brand.gradient as [string, string]}
+          style={styles.aiAssistantMicBtn}
+        >
+          <Mic size={16} color={Colors.white} />
+        </LinearGradient>
+      </TouchableOpacity>
+
       {/* Wellness Score Card */}
       {scores && (
         <View style={styles.wellnessCard}>
@@ -666,23 +684,6 @@ export default function DashboardScreen({ navigation }: Props) {
           </Text>
         </TouchableOpacity>
       </View>
-
-      {/* Centered Voice Assistant */}
-      <View style={styles.voiceContainerCentered}>
-        <TouchableOpacity
-          style={styles.voiceBtn}
-          onPress={() => navigation.navigate("Voice")}
-          activeOpacity={0.8}
-        >
-          <LinearGradient
-            colors={Colors.brand.gradient as [string, string]}
-            style={styles.voiceBtnGrad}
-          >
-            <Mic size={24} color={Colors.white} />
-          </LinearGradient>
-        </TouchableOpacity>
-        <Text style={styles.voiceBtnLabel}>Talk to Aurora</Text>
-      </View>
     </ScrollView>
     </View>
   );
@@ -766,27 +767,35 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  voiceBtn: { borderRadius: Radius.full, overflow: "hidden", ...Shadows.glow },
-  voiceBtnGrad: {
-    width: 60,
-    height: 60,
-    alignItems: "center",
-    justifyContent: "center",
+  aiAssistantBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.bg.secondary,
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.md,
+    marginBottom: Spacing.base,
+    borderWidth: 1,
+    borderColor: `${Colors.brand.primary}30`,
+    ...Shadows.card,
   },
-
-  voiceContainerCentered: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: Spacing.xxl,
-    paddingBottom: Spacing.xl,
+  aiAssistantLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  voiceBtnLabel: {
-    marginTop: Spacing.sm,
+  aiAssistantText: {
     color: Colors.text.secondary,
-    fontSize: Typography.size.xs,
-    fontWeight: Typography.weight.semibold,
-    textTransform: "uppercase",
-    letterSpacing: 1.2,
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.medium,
+  },
+  aiAssistantMicBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadows.glow,
   },
 
   insightCard: {
