@@ -32,6 +32,7 @@ export default function App() {
     const { data: { subscription } } = authService.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session && typeof session === 'object' && 'user' in session) {
+          setLoading(true);
           const s = session as { user: { id: string; email: string } };
           setUser({ id: s.user.id, email: s.user.email });
           try {
